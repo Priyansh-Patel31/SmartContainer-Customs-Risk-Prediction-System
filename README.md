@@ -1,7 +1,5 @@
 # SmartContainer Risk Engine
 
-
-
 A production-ready backend system for analysing container shipment data, predicting risk scores, detecting anomalies, and visualising shipment routes on a map.
 
 ---
@@ -15,7 +13,7 @@ A production-ready backend system for analysing container shipment data, predict
 └────────────────────────┬────────────────────────────────┘
                          │ HTTP
 ┌────────────────────────▼────────────────────────────────┐
-│           Node.js + Express.js Backend (Port 3000)      │
+│           Spring Boot Backend (Port 8080)               │
 │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐  │
 │  │ Upload   │ │Prediction│ │Dashboard │ │   Map    │  │
 │  │Controller│ │Controller│ │Controller│ │Controller│  │
@@ -23,24 +21,14 @@ A production-ready backend system for analysing container shipment data, predict
 │       │             │             │             │        │
 │  ┌────▼─────────────▼─────────────▼─────────┐  │        │
 │  │       Services Layer                      │  │        │
-│  │  predictionService  anomalyService        │  │        │
-│  │                            geoService ◄───┘  │        │
+│  │  PredictionService  WorkflowService       │  │        │
+│  │  MLClientService           MapService ◄───┘  │        │
 │  └───────────────────┬────────────────────────┘         │
 │                      │                                   │
 │  ┌───────────────────▼──────────────────────────────┐   │
-│  │              MongoDB (containerModel)            │   │
+│  │              PostgreSQL (Relational DB)          │   │
 │  │              Redis (caching layer)               │   │
 │  └──────────────────────────────────────────────────┘   │
-└──────────────────────┬──────────────────────────────────┘
-                       │ HTTP (internal)
-┌──────────────────────▼──────────────────────────────────┐
-│        Python ML Microservice - FastAPI (Port 8000)     │
-│   ┌──────────────────┐    ┌──────────────────────────┐  │
-│   │  Random Forest   │    │    Isolation Forest      │  │
-│   │  Risk Predictor  │    │    Anomaly Detector      │  │
-│   └──────────────────┘    └──────────────────────────┘  │
-│              models/risk_model.pkl                       │
-│              models/anomaly_model.pkl                    │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -52,48 +40,26 @@ A production-ready backend system for analysing container shipment data, predict
 smartcontainer-risk-engine/
 ├── docker-compose.yml
 ├── README.md
-└── backend/
-    ├── server.js                    # Entry point
-    ├── package.json
-    ├── .env.example
+├── frontend/                  # React & Vite frontend
+└── backend-spring/            # Spring Boot Backend
+    ├── pom.xml
     ├── Dockerfile
     ├── src/
-    │   ├── app.js                   # Express app factory
-    │   ├── config/
-    │   │   ├── database.js          # MongoDB connection
-    │   │   └── redis.js             # Redis cache (optional)
-    │   ├── controllers/
-    │   │   ├── predictionController.js
-    │   │   ├── uploadController.js
-    │   │   ├── dashboardController.js
-    │   │   └── mapController.js
-    │   ├── routes/
-    │   │   ├── predictionRoutes.js
-    │   │   ├── uploadRoutes.js
-    │   │   ├── dashboardRoutes.js
-    │   │   └── mapRoutes.js
-    │   ├── services/
-    │   │   ├── predictionService.js
-    │   │   ├── anomalyService.js
-    │   │   └── geoService.js
-    │   ├── models/
-    │   │   └── containerModel.js    # Mongoose schema
-    │   └── utils/
-    │       ├── featureEngineering.js
-    │       ├── riskClassifier.js
-    │       ├── fileParser.js
-    │       └── logger.js
-    ├── ml-service/
-    │   ├── main.py                  # FastAPI app
-    │   ├── train_model.py           # Training pipeline
-    │   ├── predict.py               # Risk prediction
-    │   ├── anomaly_detection.py     # Isolation Forest
-    │   ├── requirements.txt
-    │   ├── Dockerfile
-    │   └── models/                  # Saved .pkl files
-    ├── data/
-    │   └── uploads/                 # Uploaded datasets
-    └── logs/
+    │   ├── main/
+    │   │   ├── java/com/smartcontainer/
+    │   │   │   ├── SmartContainerApplication.java
+    │   │   │   ├── config/          # Security, Redis, Async configs
+    │   │   │   ├── controller/      # REST API Controllers
+    │   │   │   ├── dto/             # Data Transfer Objects
+    │   │   │   ├── entity/          # JPA Entities
+    │   │   │   ├── exception/       # Global Exception Handlers
+    │   │   │   ├── repository/      # Spring Data JPA Repositories
+    │   │   │   ├── security/        # JWT Authentication
+    │   │   │   └── service/         # Business Logic & Heuristics
+    │   │   └── resources/
+    │   │       └── application.properties
+    └── data/
+        └── uploads/                 # Uploaded datasets
 ```
 
 ---
@@ -101,51 +67,31 @@ smartcontainer-risk-engine/
 ## Quick Start — Local Development (without Docker)
 
 ### Prerequisites
-- Node.js >= 18
-- Python >= 3.10
-- MongoDB running locally on port 27017
+- Java 21 (JDK)
+- PostgreSQL >= 15 running locally on port 5432
 - (Optional) Redis on port 6379
 
-### 1. Clone & configure environment
-
-```bash
-cd smartcontainer-risk-engine/backend
-cp .env.example .env
-# Edit .env if needed (defaults work for local dev)
+### 1. Configure Database
+Ensure PostgreSQL is running and you have a database created. Update `backend-spring/src/main/resources/application.properties` if your credentials differ from the defaults:
+```properties
+spring.datasource.url=jdbc:postgresql://localhost:5432/smartcontainer_db
+spring.datasource.username=postgres
+spring.datasource.password=postgres
 ```
 
-### 2. Install Node.js dependencies
-
+### 2. Start the Spring Boot backend
 ```bash
+cd backend-spring
+mvn clean spring-boot:run
+```
+The API is now available at `http://localhost:8080`.
+
+### 3. Start the Frontend
+```bash
+cd frontend
 npm install
-```
-
-### 3. Set up Python ML microservice
-
-```bash
-cd ml-service
-python -m venv venv
-source venv/bin/activate         # macOS/Linux
-# venv\Scripts\activate          # Windows
-
-pip install -r requirements.txt
-
-# Train models (generates synthetic data if no CSV provided)
-python train_model.py
-
-# Start ML service
-uvicorn main:app --reload --port 8000
-```
-
-### 4. Start the Node.js backend
-
-```bash
-# From backend/ directory
 npm run dev
 ```
-
-The API is now available at `http://localhost:3000`  
-The ML microservice is at `http://localhost:8000`
 
 ---
 
@@ -162,7 +108,6 @@ docker-compose up --build -d
 
 # View logs
 docker-compose logs -f backend
-docker-compose logs -f ml-service
 
 # Stop all services
 docker-compose down
@@ -171,9 +116,8 @@ docker-compose down
 Services started:
 | Service | Port |
 |---------|------|
-| Node.js Backend | 3000 |
-| Python ML Service | 8000 |
-| MongoDB | 27017 |
+| Spring Boot Backend | 8080 |
+| PostgreSQL | 5432 |
 | Redis | 6379 |
 
 ---
@@ -191,44 +135,23 @@ GET /health
 ```
 POST /api/upload
 Content-Type: multipart/form-data
-Field: dataset (CSV or Excel file)
+Field: file (CSV file)
 ```
 
 **Response:**
 ```json
 {
   "success": true,
-  "batch_id": "uuid-here",
-  "total_records": 1500,
-  "inserted": 1200,
-  "updated": 300
-}
-```
-
----
-
-### 2. Train Model
-```
-POST /api/train
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Model training completed successfully.",
-  "metrics": {
-    "accuracy": 0.9234,
-    "f1_score": 0.9187,
-    "roc_auc": 0.9560,
-    "training_samples": 2400
+  "data": {
+    "job_id": "uuid-here",
+    "status": "PROCESSING"
   }
 }
 ```
 
 ---
 
-### 3. Predict Single Container Risk
+### 2. Predict Single Container Risk
 ```
 POST /api/predict
 Content-Type: application/json
@@ -249,8 +172,7 @@ Content-Type: application/json
   "measured_weight": 18500,
   "dwell_time_hours": 120,
   "hs_code": "8471",
-  "shipping_line": "Maersk",
-  "clearance_status": "Under Review"
+  "shipping_line": "Maersk"
 }
 ```
 
@@ -258,42 +180,18 @@ Content-Type: application/json
 ```json
 {
   "success": true,
-  "prediction": {
-    "container_id": "C12345",
+  "data": {
     "risk_score": 0.8234,
     "risk_level": "Critical",
     "anomaly_flag": true,
-    "anomaly_score": 0.73,
-    "explanation": "Measured weight differs from declared weight by 54.2%. Container dwell time is unusually high (120 hours).",
-    "features": {
-      "weight_difference": 6500,
-      "weight_mismatch_percentage": 54.17,
-      "value_to_weight_ratio": 4.59,
-      "high_dwell_time_flag": 1,
-      "dwell_time_hours": 120,
-      "trade_route_risk": 0.45
-    }
+    "anomaly_score": 0.73
   }
 }
 ```
 
 ---
 
-### 4. Batch Prediction
-```
-POST /api/predict-batch
-Content-Type: multipart/form-data
-Field: dataset (CSV or Excel)
-```
-
-**Response:** Downloadable CSV file containing:
-- `Container_ID`, `Origin_Country`, `Destination_Country`
-- `Declared_Weight`, `Measured_Weight`, `Declared_Value`, `Dwell_Time_Hours`
-- `Risk_Score`, `Risk_Level`, `Anomaly_Flag`, `Explanation`
-
----
-
-### 5. Dashboard Summary
+### 3. Dashboard Summary
 ```
 GET /api/summary
 ```
@@ -306,112 +204,8 @@ GET /api/summary
   "critical_count": 1200,
   "low_risk_count": 4500,
   "clear_count": 9300,
-  "anomaly_count": 950,
-  "unprocessed_count": 0,
-  "risk_distribution": {
-    "critical_percent": "8.0",
-    "low_risk_percent": "30.0",
-    "clear_percent": "62.0"
-  }
+  "anomaly_count": 950
 }
-```
-
----
-
-### 6. Risk Distribution (Chart Data)
-```
-GET /api/dashboard/risk-distribution
-```
-
----
-
-### 7. Top Risky Trade Routes
-```
-GET /api/dashboard/top-risky-routes?limit=10
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "origin": "Nigeria",
-      "destination": "Netherlands",
-      "critical_count": 145,
-      "avg_risk_score": 0.784,
-      "anomaly_count": 67
-    }
-  ]
-}
-```
-
----
-
-### 8. Anomaly Statistics
-```
-GET /api/dashboard/anomaly-stats
-```
-
----
-
-### 9. Container Route Map
-```
-GET /api/container-route/:container_id
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "container_id": "C12345",
-    "origin": { "lat": 31.2304, "lng": 121.4737 },
-    "destination": { "lat": 51.9244, "lng": 4.4777 },
-    "origin_country": "China",
-    "destination_country": "Netherlands",
-    "destination_port": "Rotterdam",
-    "route": [
-      [31.2304, 121.4737],
-      [35.0, 90.0],
-      [40.0, 60.0],
-      [45.0, 30.0],
-      [51.9244, 4.4777]
-    ],
-    "geojson": {
-      "type": "Feature",
-      "properties": {
-        "container_id": "C12345",
-        "risk_level": "Critical",
-        "risk_score": 0.82
-      },
-      "geometry": {
-        "type": "LineString",
-        "coordinates": [
-          [121.4737, 31.2304],
-          [90.0, 35.0],
-          [4.4777, 51.9244]
-        ]
-      }
-    }
-  }
-}
-```
-
----
-
-### 10. All Routes (Map Overview)
-```
-GET /api/map/all-routes?page=1&limit=50&risk_level=Critical
-```
-
-Returns a GeoJSON FeatureCollection for rendering all shipment lines on a world map.
-
----
-
-### 11. Upload Batch List
-```
-GET /api/upload/batches
 ```
 
 ---
@@ -426,86 +220,23 @@ GET /api/upload/batches
 
 ---
 
-## Feature Engineering
-
-| Feature | Formula |
-|---------|---------|
-| `weight_difference` | `|declared_weight - measured_weight|` |
-| `weight_mismatch_percentage` | `(weight_difference / declared_weight) × 100` |
-| `value_to_weight_ratio` | `declared_value / measured_weight` |
-| `high_dwell_time_flag` | `1 if dwell_time_hours > 72 else 0` |
-| `importer_frequency` | Count of shipments by this importer |
-| `exporter_frequency` | Count of shipments by this exporter |
-| `trade_route_risk` | Proportion of critical containers on this route |
-
----
-
-## Training a Custom Model
-
-You can train the model on your own dataset:
-
-```bash
-cd backend/ml-service
-source venv/bin/activate
-
-# With real data (CSV must include risk_label or risk_score column)
-python train_model.py --data /path/to/your/dataset.csv
-
-# With synthetic data (for testing)
-python train_model.py
-```
-
-Or via the API endpoint after uploading data:
-```bash
-curl -X POST http://localhost:3000/api/train
-```
-
----
-
-## Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PORT` | `3000` | Node.js server port |
-| `MONGODB_URI` | `mongodb://localhost:27017/smartcontainer_db` | MongoDB connection string |
-| `REDIS_HOST` | `localhost` | Redis host |
-| `ML_SERVICE_URL` | `http://localhost:8000` | Python ML microservice URL |
-| `GEOCODER_PROVIDER` | `openstreetmap` | Geocoding provider |
-| `GEOCODER_API_KEY` | _(empty)_ | API key for paid geocoders |
-| `MAX_FILE_SIZE_MB` | `50` | Maximum upload file size |
-| `RATE_LIMIT_MAX_REQUESTS` | `100` | Requests per window |
-| `LOG_LEVEL` | `info` | Logging verbosity |
-| `CORS_ORIGINS` | `http://localhost:3000` | Allowed frontend origins |
-
----
-
 ## Fallback Behaviour
 
 The system is designed to degrade gracefully:
-- **Redis unavailable** → caching disabled, all requests hit MongoDB directly
-- **ML microservice unavailable** → Node.js applies a heuristic scoring algorithm based on engineered features
-- **Geocoding API unavailable** → falls back to a built-in static coordinate map covering 40+ countries and major ports
+- **Redis unavailable** → Caching disabled, all requests hit PostgreSQL directly.
+- **ML microservice unavailable** → Spring Boot applies a heuristic scoring algorithm based on engineered features (e.g. weight mismatches, dwell times).
 
 ---
 
 ## Security
 
-- All API routes are rate-limited (100 req/15min by default)
-- `helmet.js` sets secure HTTP headers
-- File uploads are type-validated and size-limited
-- CORS origins are configurable and restricted
-- MongoDB queries use parameterised inputs (Mongoose)
-- Non-root Docker user for both services
+- All API endpoints are secured via stateless JWT Authentication.
+- Passwords are encrypted using BCrypt.
+- File uploads are validated (only CSV allowed).
+- Cross-Origin Resource Sharing (CORS) is configured explicitly.
+- Spring Data JPA is used to prevent SQL Injection attacks.
 
 ---
-
-## Running Tests
-
-```bash
-cd backend
-npm test
-```
-
 
 ```mermaid
 graph TD
@@ -513,7 +244,6 @@ graph TD
     classDef client fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#000
     classDef backend fill:#fdf4ff,stroke:#c026d3,stroke-width:2px,color:#000
     classDef service fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#000
-    classDef ml fill:#ecfdf5,stroke:#059669,stroke-width:2px,color:#000
     classDef db fill:#fef2f2,stroke:#dc2626,stroke-width:2px,color:#000
     classDef infra fill:#f3f4f6,stroke:#4b5563,stroke-width:2px,color:#000,stroke-dasharray: 5 5
     
@@ -521,88 +251,54 @@ graph TD
     subgraph ClientLayer ["🖥️ Client / Presentation Layer (React 19 & Vite)"]
         UI["Web Dashboard"]
         Charts["Charts & Maps (Recharts, Leaflet)"]
-        ReactQuery["API Client (React Query polling)"]
+        ReactQuery["API Client (Axios)"]
     end
     
     %% Layer 2: Deployed Infrastructure
-    subgraph Vercel ["☁️ Infrastructure Layer (Vercel Serverless)"]
+    subgraph SpringContainer ["☁️ Infrastructure Layer (Docker)"]
         
         %% API Layer
-        subgraph BackendLayer ["⚙️ Backend API Layer (Node.js & Express)"]
-            Router["API Routing & Validation"]
-            Controllers["Controllers (Auth, StreamUpload, Prediction, Dashboard)"]
+        subgraph BackendLayer ["⚙️ Backend API Layer (Spring Boot)"]
+            Router["Spring Web MVC Controllers"]
+            Security["Spring Security (JWT Filter)"]
         end
         
-        %% Data Processing
-        subgraph Pipeline ["🔄 Data Processing Pipeline"]
-            Multer["Multer File Upload"]
-            Parser["fileParser.js (CSV/XLSX)"]
-            FeatEng["featureEngineering.js (31 Parameters)"]
-        end
-
         %% Service Layer
         subgraph ServiceLayer ["🛠️ Core Service Layer"]
-            PredictionSvc["predictionService"]
-            HistorySvc["importerHistoryService (Escalation)"]
-            AnomalySvc["anomalyService"]
-            AuditSvc["auditService"]
-            JobQueue["jobQueueService (BullMQ)"]
-            SocketSvc["socketService (Local)"]
+            PredictionSvc["PredictionService"]
+            HistorySvc["ImporterHistoryService"]
+            MapSvc["MapService"]
+            AuditSvc["AuditService"]
+            MLClientSvc["MLClientService (Heuristic Fallback)"]
         end
     end
-
-    %% Layer 3: Machine Learning
-    subgraph MLMicroservice ["🧠 Machine Learning Microservice (FastAPI)"]
-        MLEndpoints["/predict & /predict-batch endpoints"]
-        Ensemble["Model Ensemble (XGBoost, Random Forest)"]
-        IsoForest["Anomaly Detection (Isolation Forest)"]
-        SHAP["SHAP Features Explainer"]
-    end
     
-    %% Layer 4: Data persistence
+    %% Layer 3: Data persistence
     subgraph DataLayer ["🗄️ Data Layer"]
-        MongoDB[("MongoDB Atlas Cluster<br/>(Containers, Jobs, Users, AuditLogs)")]
-        Redis[("Redis Cache<br/>(Dash metrics, High-Risk caching)")]
+        Postgres[("PostgreSQL<br/>(Containers, Users, Audits)")]
+        Redis[("Redis Cache")]
     end
     
     %% Core Relationships & Flow Architecture
     UI --> Charts
     UI --> ReactQuery
-    ReactQuery -- "HTTPS REST (e.g. POST /api/upload/stream)" --> Router
+    ReactQuery -- "HTTP REST" --> Security
     
-    Router --> Controllers
+    Security --> Router
+    Router --> ServiceLayer
     
-    %% Upload Pipeline
-    Controllers -- "Trigger Upload Parsing" --> Multer
-    Multer --> Parser
-    Parser --> FeatEng
-    FeatEng --> PredictionSvc
-    
-    %% Controller to Services Mapping
-    Controllers --> HistorySvc & AnomalySvc & AuditSvc & JobQueue & SocketSvc
-    
-    %% ML Integration Handshake
-    PredictionSvc -- "Batch Request Validation" --> MLEndpoints
-    MLEndpoints --> Ensemble & IsoForest
-    Ensemble & IsoForest --> SHAP
-    SHAP -- "Risk Score, Anomaly Status, Explanations" --> PredictionSvc
-    
-    %% Post-processing Rules
+    %% Service Interactions
+    PredictionSvc --> MLClientSvc
     PredictionSvc --> HistorySvc
-    HistorySvc -. "Apply Importer Guilt-by-Association" .-> MongoDB
     
     %% Database Mapping
-    Controllers -- "Write / Query Data" --> MongoDB
-    AuditSvc -- "Save Events" --> MongoDB
-    JobQueue -- "Enqueue Background Jobs" --> Redis
-    Controllers -- "Invalidate / Fetch Fast Metrics" --> Redis
+    ServiceLayer -- "JPA Repositories" --> Postgres
+    ServiceLayer -- "Cache Abstraction" --> Redis
     
     %% Apply Styles
     class ClientLayer,UI,Charts,ReactQuery client
-    class BackendLayer,Router,Controllers backend
-    class ServiceLayer,PredictionSvc,HistorySvc,AnomalySvc,AuditSvc,JobQueue,SocketSvc service
-    class MLMicroservice,Ensemble,IsoForest,SHAP,MLEndpoints ml
-    class DataLayer,MongoDB,Redis db
-    class Pipeline,Multer,Parser,FeatEng service
-    class Vercel infra
+    class BackendLayer,Router,Security backend
+    class ServiceLayer,PredictionSvc,HistorySvc,MapSvc,AuditSvc,MLClientSvc service
+    class DataLayer,Postgres,Redis db
+    class SpringContainer infra
 ```
