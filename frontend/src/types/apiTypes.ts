@@ -100,6 +100,8 @@ export interface RecentHighRisk {
     // optional location fields used by dashboard tables
     origin_country?: string;
     destination_country?: string;
+    destination_port?: string;
+    declaration_date?: string;
 }
 
 // ─── Upload ────────────────────────────────────────────────

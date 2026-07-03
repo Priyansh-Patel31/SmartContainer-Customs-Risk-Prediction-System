@@ -7,7 +7,7 @@ interface AuthContextType {
     token: string | null;
     isAuthenticated: boolean;
     isLoading: boolean;
-    login: (username: string, password: string) => Promise<void>;
+    login: (username: string, password: string) => Promise<AuthUser>;
     logout: () => void;
     setUser: (u: AuthUser | null) => void;
     updateUser: (user: AuthUser) => void;
@@ -36,11 +36,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     }, []);
 
-    const login = async (username: string, password: string) => {
+    const login = async (username: string, password: string): Promise<AuthUser> => {
         const data = await apiLogin(username, password);
         localStorage.setItem('sce_token', data.token);
         setToken(data.token);
         setUser(data.user);
+        return data.user;
     };
 
     const logout = () => {

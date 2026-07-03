@@ -37,6 +37,19 @@ export default function ContainerTable({ data }: Props) {
             },
         },
         {
+            accessorKey: 'declaration_date',
+            header: 'Declaration Date',
+            cell: (info) => {
+                const val = info.getValue<string | undefined>();
+                return val ? new Date(val).toLocaleDateString() : '—';
+            },
+        },
+        {
+            accessorKey: 'destination_port',
+            header: 'Destination Port',
+            cell: (info) => info.getValue<string | undefined>() || '—',
+        },
+        {
             accessorKey: 'risk_score',
             header: 'Risk Score',
             cell: (info) => {
@@ -53,9 +66,12 @@ export default function ContainerTable({ data }: Props) {
             },
         },
         {
-            accessorKey: 'processed_at',
-            header: 'Processed At',
-            cell: (info) => new Date(info.getValue<string>()).toLocaleString(),
+            accessorKey: 'explanation',
+            header: 'Explanation',
+            cell: (info) => {
+                const text = info.getValue<string | undefined>();
+                return <span className="truncate max-w-xs block text-xs" title={text}>{text || '—'}</span>;
+            },
         },
     ], []);
 

@@ -505,3 +505,104 @@ The system is designed to degrade gracefully:
 cd backend
 npm test
 ```
+
+
+```mermaid
+graph TD
+    %% Styling Classes
+    classDef client fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#000
+    classDef backend fill:#fdf4ff,stroke:#c026d3,stroke-width:2px,color:#000
+    classDef service fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#000
+    classDef ml fill:#ecfdf5,stroke:#059669,stroke-width:2px,color:#000
+    classDef db fill:#fef2f2,stroke:#dc2626,stroke-width:2px,color:#000
+    classDef infra fill:#f3f4f6,stroke:#4b5563,stroke-width:2px,color:#000,stroke-dasharray: 5 5
+    
+    %% Layer 1: Client
+    subgraph ClientLayer ["🖥️ Client / Presentation Layer (React 19 & Vite)"]
+        UI["Web Dashboard"]
+        Charts["Charts & Maps (Recharts, Leaflet)"]
+        ReactQuery["API Client (React Query polling)"]
+    end
+    
+    %% Layer 2: Deployed Infrastructure
+    subgraph Vercel ["☁️ Infrastructure Layer (Vercel Serverless)"]
+        
+        %% API Layer
+        subgraph BackendLayer ["⚙️ Backend API Layer (Node.js & Express)"]
+            Router["API Routing & Validation"]
+            Controllers["Controllers (Auth, StreamUpload, Prediction, Dashboard)"]
+        end
+        
+        %% Data Processing
+        subgraph Pipeline ["🔄 Data Processing Pipeline"]
+            Multer["Multer File Upload"]
+            Parser["fileParser.js (CSV/XLSX)"]
+            FeatEng["featureEngineering.js (31 Parameters)"]
+        end
+
+        %% Service Layer
+        subgraph ServiceLayer ["🛠️ Core Service Layer"]
+            PredictionSvc["predictionService"]
+            HistorySvc["importerHistoryService (Escalation)"]
+            AnomalySvc["anomalyService"]
+            AuditSvc["auditService"]
+            JobQueue["jobQueueService (BullMQ)"]
+            SocketSvc["socketService (Local)"]
+        end
+    end
+
+    %% Layer 3: Machine Learning
+    subgraph MLMicroservice ["🧠 Machine Learning Microservice (FastAPI)"]
+        MLEndpoints["/predict & /predict-batch endpoints"]
+        Ensemble["Model Ensemble (XGBoost, Random Forest)"]
+        IsoForest["Anomaly Detection (Isolation Forest)"]
+        SHAP["SHAP Features Explainer"]
+    end
+    
+    %% Layer 4: Data persistence
+    subgraph DataLayer ["🗄️ Data Layer"]
+        MongoDB[("MongoDB Atlas Cluster<br/>(Containers, Jobs, Users, AuditLogs)")]
+        Redis[("Redis Cache<br/>(Dash metrics, High-Risk caching)")]
+    end
+    
+    %% Core Relationships & Flow Architecture
+    UI --> Charts
+    UI --> ReactQuery
+    ReactQuery -- "HTTPS REST (e.g. POST /api/upload/stream)" --> Router
+    
+    Router --> Controllers
+    
+    %% Upload Pipeline
+    Controllers -- "Trigger Upload Parsing" --> Multer
+    Multer --> Parser
+    Parser --> FeatEng
+    FeatEng --> PredictionSvc
+    
+    %% Controller to Services Mapping
+    Controllers --> HistorySvc & AnomalySvc & AuditSvc & JobQueue & SocketSvc
+    
+    %% ML Integration Handshake
+    PredictionSvc -- "Batch Request Validation" --> MLEndpoints
+    MLEndpoints --> Ensemble & IsoForest
+    Ensemble & IsoForest --> SHAP
+    SHAP -- "Risk Score, Anomaly Status, Explanations" --> PredictionSvc
+    
+    %% Post-processing Rules
+    PredictionSvc --> HistorySvc
+    HistorySvc -. "Apply Importer Guilt-by-Association" .-> MongoDB
+    
+    %% Database Mapping
+    Controllers -- "Write / Query Data" --> MongoDB
+    AuditSvc -- "Save Events" --> MongoDB
+    JobQueue -- "Enqueue Background Jobs" --> Redis
+    Controllers -- "Invalidate / Fetch Fast Metrics" --> Redis
+    
+    %% Apply Styles
+    class ClientLayer,UI,Charts,ReactQuery client
+    class BackendLayer,Router,Controllers backend
+    class ServiceLayer,PredictionSvc,HistorySvc,AnomalySvc,AuditSvc,JobQueue,SocketSvc service
+    class MLMicroservice,Ensemble,IsoForest,SHAP,MLEndpoints ml
+    class DataLayer,MongoDB,Redis db
+    class Pipeline,Multer,Parser,FeatEng service
+    class Vercel infra
+```

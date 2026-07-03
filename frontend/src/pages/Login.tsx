@@ -12,12 +12,18 @@ export default function Login() {
     const { login } = useAuth();
     const navigate = useNavigate();
 
+    const [role, setRole] = useState<'admin' | 'exporter'>('admin');
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         try {
-            await login(username, password);
-            navigate('/');
+            const user = await login(username, password);
+            if (user?.role === 'exporter') {
+                navigate('/exporter');
+            } else {
+                navigate('/');
+            }
         } catch (err: any) {
             console.error('[Login Error]', err);
             const message = err?.response?.data?.message || err.message || 'Connection failed';
@@ -43,7 +49,44 @@ export default function Login() {
                 </div>
 
                 <div className="bg-card border border-border rounded-xl p-8 shadow-lg animate-in slide-in-from-bottom-4 duration-500">
-                    <h2 className="text-lg font-semibold text-white mb-6 animate-in slide-in-from-left duration-500">Sign in to your account</h2>
+                    <h2 className="text-lg font-semibold text-white mb-6 text-center animate-in slide-in-from-left duration-500">
+                        Sign in to your account
+                    </h2>
+
+                    {/* Role Selection Toggle */}
+                    <div className="flex bg-background/50 p-1 rounded-lg mb-6 border border-border">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setRole('admin');
+                                setUsername('admin');
+                                setPassword('Admin@12345');
+                            }}
+                            className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all ${
+                                role === 'admin' 
+                                ? 'bg-primary text-white shadow-sm' 
+                                : 'text-foreground/60 hover:text-foreground'
+                            }`}
+                        >
+                            Admin
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setRole('exporter');
+                                setUsername('exporter');
+                                setPassword('expoeter@123'); // Matching the user requested typo
+                            }}
+                            className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all ${
+                                role === 'exporter' 
+                                ? 'bg-primary text-white shadow-sm' 
+                                : 'text-foreground/60 hover:text-foreground'
+                            }`}
+                        >
+                            Exporter
+                        </button>
+                    </div>
+
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div>
                             <label className="block text-xs font-medium text-foreground/70 uppercase tracking-wider mb-1.5">
@@ -57,7 +100,7 @@ export default function Login() {
                                     value={username}
                                     onChange={e => setUsername(e.target.value)}
                                     className="w-full pl-9 pr-4 py-2 bg-background border border-border rounded-lg text-sm text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all duration-150"
-                                    placeholder="admin"
+                                    placeholder={role === 'admin' ? "admin" : "Enter Exporter ID or username"}
                                 />
                             </div>
                         </div>
@@ -92,7 +135,7 @@ export default function Login() {
                         >
                             {loading
                                 ? <><Loader2 className="w-4 h-4 animate-spin" /> Signing in...</>
-                                : 'Sign In'
+                                : `Sign In as ${role === 'admin' ? 'Admin' : 'Exporter'}`
                             }
                         </button>
                     </form>

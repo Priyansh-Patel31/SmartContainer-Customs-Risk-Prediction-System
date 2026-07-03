@@ -8,10 +8,10 @@
 import { io, type Socket } from 'socket.io-client';
 
 // VITE_BACKEND_URL should be set to the backend base URL (no /api suffix).
-// Example: http://localhost:3000
+// Example: http://localhost:8080
 const BACKEND_URL: string =
     (import.meta.env.VITE_BACKEND_URL as string | undefined) ||
-    (import.meta.env.DEV ? 'http://localhost:3000' : window.location.origin);
+    (import.meta.env.DEV ? 'http://localhost:8080' : window.location.origin);
 
 let _socket: Socket | null = null;
 

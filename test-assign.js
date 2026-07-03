@@ -3,7 +3,7 @@ const http = require('http');
 const data = JSON.stringify({ username: 'admin', password: 'password' });
 const req = http.request({
   hostname: 'localhost',
-  port: 3000,
+  port: 8080,
   path: '/api/auth/login',
   method: 'POST',
   headers: {
@@ -20,7 +20,7 @@ const req = http.request({
     const assignData = JSON.stringify({ assigned_to: 'admin', notes: 'hello world test!' });
     const assignReq = http.request({
       hostname: 'localhost',
-      port: 3000,
+      port: 8080,
       path: '/api/containers/CONT-6874/assign',
       method: 'POST',
       headers: {

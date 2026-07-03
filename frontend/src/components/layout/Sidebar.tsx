@@ -7,11 +7,14 @@ import {
     Route,
     BarChart2,
     FlaskConical,
+    MessageSquare,
+    List,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import logo from '@/assets/logo.png';
+import { useAuth } from '@/context/AuthContext';
 
-const links = [
+const adminLinks = [
     { to: '/', label: 'Dashboard', icon: LayoutDashboard },
     { to: '/upload', label: 'Upload Dataset', icon: UploadCloud },
     { to: '/predict', label: 'Single Prediction', icon: Crosshair },
@@ -21,7 +24,18 @@ const links = [
     { to: '/analytics', label: 'Insights', icon: BarChart2 },
 ];
 
+const exporterLinks = [
+    { to: '/exporter', label: 'Dashboard', icon: LayoutDashboard },
+    { to: '/exporter/tracking', label: 'My Containers', icon: List },
+    { to: '/exporter/analytics', label: 'Risk Results', icon: BarChart2 },
+    { to: '/exporter/chat', label: 'Chat with Admin', icon: MessageSquare },
+];
+
 export default function Sidebar() {
+    const { user } = useAuth();
+    const isExporter = user?.role === 'exporter';
+    const activeLinks = isExporter ? exporterLinks : adminLinks;
+
     return (
         <aside className="w-64 shrink-0 bg-sidebar border-r border-border flex flex-col h-screen sticky top-0 z-20">
             {/* Logo */}
@@ -31,7 +45,7 @@ export default function Sidebar() {
 
             {/* Navigation */}
             <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
-                {links.map((link) => (
+                {activeLinks.map((link) => (
                     <NavLink
                         key={link.to}
                         to={link.to}

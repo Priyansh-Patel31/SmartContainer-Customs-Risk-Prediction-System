@@ -9,6 +9,7 @@ import {
     exportPredictionsCSV,
 } from '@/api/routes';
 import { useLivePredictions } from '@/hooks/useLivePredictions';
+import { useAuth } from '@/context/AuthContext';
 import { useSocket } from '@/context/SocketContext';
 import ShipmentListModal from '@/components/dashboard/ShipmentListModal';
 import ShipmentDetailModal from '@/components/dashboard/ShipmentDetailModal';
@@ -298,6 +299,8 @@ export default function Dashboard() {
     const navigate = useNavigate();
     const qc = useQueryClient();
     const { connected } = useSocket();
+    const { user } = useAuth();
+    const isExporter = user?.role === 'exporter';
 
     const [listFilter, setListFilter] = useState<{ label: string; risk_level?: RiskLevel; anomaly?: boolean } | null>(null);
     const [selectedContainerId, setSelectedContainerId] = useState<string | null>(null);
@@ -329,7 +332,7 @@ export default function Dashboard() {
     });
 
     /* Live socket stream — listens to ALL jobs */
-    const { rows: liveRows, progress, done, error: streamError, liveCounts, isStreaming } = useLivePredictions();
+    const { rows: liveRows, progress, done, error: streamError, liveCounts, isStreaming } = useLivePredictions(undefined, !isExporter);
 
     /* Refresh API data after stream finishes */
     useEffect(() => {
@@ -407,27 +410,29 @@ export default function Dashboard() {
             <div className="flex items-start justify-between">
                 <div>
                     <h1 className="text-2xl font-bold text-foreground">Risk Operations Dashboard</h1>
-                    <p className="text-sm text-foreground/50 mt-1">Real-time prediction monitoring and high-risk container detection</p>
+                    <p className="text-sm text-foreground/50 mt-1">{isExporter ? 'Monitor your active shipments and alerts' : 'Real-time prediction monitoring and high-risk container detection'}</p>
                 </div>
-                <div className="flex items-center gap-3 mt-1 shrink-0">
-                    <button
-                        onClick={() => exportPredictionsCSV()}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 text-xs font-semibold transition-colors"
-                    >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                        </svg>
-                        Export CSV
-                    </button>
-                    <div className="flex items-center gap-1.5 text-xs text-foreground/40">
-                        <span className={cn('w-1.5 h-1.5 rounded-full', connected ? 'bg-emerald-400' : 'bg-red-400')} />
-                        {connected ? 'Live' : 'Reconnecting...'}
+                {!isExporter && (
+                    <div className="flex items-center gap-3 mt-1 shrink-0">
+                        <button
+                            onClick={() => exportPredictionsCSV()}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 text-xs font-semibold transition-colors"
+                        >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            Export CSV
+                        </button>
+                        <div className="flex items-center gap-1.5 text-xs text-foreground/40">
+                            <span className={cn('w-1.5 h-1.5 rounded-full', connected ? 'bg-emerald-400' : 'bg-red-400')} />
+                            {connected ? 'Live' : 'Reconnecting...'}
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
 
             {/* Live stream progress */}
-            {progress && isStreaming && (
+            {!isExporter && progress && isStreaming && (
                 <StreamBanner processed={progress.processed} total={progress.total} percent={progress.percent} jobId={progress.job_id} />
             )}
 

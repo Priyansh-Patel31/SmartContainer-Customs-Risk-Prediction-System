@@ -19,8 +19,9 @@ export interface LivePredictionsState {
  *
  * @param filterJobId  When provided, only rows matching this job_id are collected.
  *                     Pass undefined on the Dashboard to receive events from ALL jobs.
+ * @param enabled      Whether the hook should subscribe to the socket events.
  */
-export function useLivePredictions(filterJobId?: string): LivePredictionsState {
+export function useLivePredictions(filterJobId?: string, enabled: boolean = true): LivePredictionsState {
     const { socket } = useSocket();
     const [rows, setRows] = useState<PredictionRow[]>([]);
     const [progress, setProgress] = useState<PredictionProgress | null>(null);
@@ -40,6 +41,8 @@ export function useLivePredictions(filterJobId?: string): LivePredictionsState {
     }, []);
 
     useEffect(() => {
+        if (!enabled) return;
+
         const onRow = (row: PredictionRow) => {
             if (filterJobId && row.job_id !== filterJobId) return;
 

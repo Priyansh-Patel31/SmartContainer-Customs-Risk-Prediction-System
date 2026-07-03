@@ -19,6 +19,7 @@ import SystemAccess from '@/pages/SystemAccess';
 import Dossier from '@/pages/Dossier';
 import Analytics from '@/pages/Analytics';
 import Simulator from '@/pages/Simulator';
+import Chat from '@/pages/Chat';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -32,8 +33,8 @@ const queryClient = new QueryClient({
   },
 });
 
-function ProtectedRoute({ children }: { children: ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+function ProtectedRoute({ children, allowedRoles }: { children: ReactNode, allowedRoles?: string[] }) {
+  const { user, isAuthenticated, isLoading } = useAuth();
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
@@ -42,6 +43,10 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
     );
   }
   if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (allowedRoles && user?.role && !allowedRoles.includes(user.role)) {
+      if (user.role === 'exporter') return <Navigate to="/exporter" replace />;
+      return <Navigate to="/" replace />;
+  }
   return <>{children}</>;
 }
 
@@ -55,7 +60,9 @@ export default function App() {
           <BrowserRouter>
             <Routes>
               <Route path="/login" element={<Login />} />
-              <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+
+              {/* Admin Portal (Standard Base) */}
+              <Route element={<ProtectedRoute allowedRoles={['admin', 'officer']}><AppLayout /></ProtectedRoute>}>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/upload" element={<Upload />} />
                 <Route path="/predict" element={<Predict />} />
@@ -63,10 +70,21 @@ export default function App() {
                 <Route path="/tracking" element={<Tracking />} />
                 <Route path="/analytics" element={<Analytics />} />
                 <Route path="/simulator" element={<Simulator />} />
+                <Route path="/chat" element={<Chat />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/account-settings" element={<AccountSettings />} />
                 <Route path="/system-access" element={<SystemAccess />} />
                 <Route path="/dossier/:id" element={<Dossier />} />
+              </Route>
+
+              {/* Exporter Portal */}
+              <Route path="/exporter" element={<ProtectedRoute allowedRoles={['exporter']}><AppLayout /></ProtectedRoute>}>
+                <Route index element={<Dashboard />} />
+                <Route path="tracking" element={<Tracking />} />
+                <Route path="analytics" element={<Analytics />} />
+                <Route path="chat" element={<Chat />} />
+                <Route path="profile" element={<Profile />} />
+                <Route path="account-settings" element={<AccountSettings />} />
               </Route>
             </Routes>
           </BrowserRouter>
